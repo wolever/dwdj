@@ -1,6 +1,7 @@
 import os
 
 from django import template
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from django.conf import settings as s
@@ -10,6 +11,16 @@ register = template.Library()
 
 def _stat(file):
     return int(os.stat(os.path.join(s.STATIC_ROOT, file)).st_mtime)
+
+def format_attrs(attrs):
+    """ Formats HTML key/value attributes::
+
+        >>> format_attrs([("foo", "bar"), ("a", '"bar"')])
+        ' foo="bar" a="&qt;bar&qt;"'
+        """
+    return (attrs and " " or "") + " ".join(
+        '%s="%s"' %(key, escape(val)) for (key, val) in attrs
+    )
 
 def _mtime_suffix(file):
     try:
@@ -31,18 +42,25 @@ def static_url(file):
     return "%s%s?%s" %(s.STATIC_URL, file, _mtime_suffix(file))
 
 @register.simple_tag
-def stylesheet_link(stylesheet, media="all"):
-    return mark_safe('<link rel="stylesheet" href="%s%s?%d" type="text/css" media="%s" />' %(
+def stylesheet_link(stylesheet, media="all", rel="stylesheet", type="text/css",
+                    **attrs):
+    return mark_safe('<link rel="%s" href="%s%s?%d" type="%s" media="%s"%s />' %(
+        rel,
         s.STATIC_URL,
         stylesheet,
         _mtime_suffix(stylesheet),
+        type,
         media,
+        format_attrs(attrs.items()),
     ))
 
 @register.simple_tag
-def script_link(script):
-    return mark_safe('<script type="text/javascript" src="%s%s?%d"></script>' %(
+def script_link(script, type="text/javascript", **attrs):
+
+    return mark_safe('<script type="%s" src="%s%s?%d"%s></script>' %(
+        type,
         s.STATIC_URL,
         script,
-        _mtime_suffix(script)
+        _mtime_suffix(script),
+        format_attrs(attrs.items()),
     ))
