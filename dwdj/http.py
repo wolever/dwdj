@@ -10,7 +10,7 @@ from django.http import CompatibleStreamingHttpResponse, HttpResponseNotModified
 def escape_header(header_value):
     """ Escapes an HTTP header (ex, a ``Content-Disposition``).
         Kind of blunt and probably not 100% correct... But should be safe. """
-    return re.sub("\t\n\r;", "", header_value)
+    return re.sub(" *[\t\n\r;,]+ *", " ", header_value)
 
 def file_response(request, fullpath, download=None, download_name=None):
     statobj = os.stat(fullpath)
@@ -26,10 +26,11 @@ def file_response(request, fullpath, download=None, download_name=None):
     if encoding:
         response["Content-Encoding"] = encoding
 
-    if download or download is None and download_name:
-        response["Content-Disposition"] = "attachment; filename=%s" %(
-            escape_header(download_name),
-        )
+    if download or download_name:
+        suffix = ""
+        if download_name:
+            suffix = "; filename=%s" %(
+                escape_header(download_name),
+            )
+        response["Content-Disposition"] = "attachment" + suffix
     return response
-
-
