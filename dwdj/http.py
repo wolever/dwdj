@@ -26,6 +26,7 @@ def file_response(request, fullpath, download=None, download_name=None):
     if encoding:
         response["Content-Encoding"] = encoding
 
+    # TODO: unicode safety on download_name
     if download or download_name:
         suffix = ""
         if download_name:
