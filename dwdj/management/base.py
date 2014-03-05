@@ -36,8 +36,8 @@ class BaseCommand(DjBaseCommand):
     """
 
     base_option_list = [
-        make_option('-v', '--verbose', action="count", dest="verbosity"),
         make_option('-q', '--quiet', action="store_const", const=-1, dest="verbosity"),
+        make_option('-v', '--verbose', action="count", default=0, dest="verbosity"),
         make_option('--verbose-log', action="store_true", help=dedent("""
             Use a more verbose logging format.
         """)),
