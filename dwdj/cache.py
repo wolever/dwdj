@@ -35,6 +35,8 @@ class SwappableCache(object):
                     },
                 })
                 s.CACHES = new_caches
+                django_cache.cache.set_backend("locmem")
+                django_cache.cache.clear()
 
             def tearDown(self):
                 s.CACHES = self.old_caches
