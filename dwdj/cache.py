@@ -64,16 +64,13 @@ class SwappableCache(object):
                 delattr(self, attr)
             except AttributeError:
                 pass
-        self._backend_attrs = []
 
     def get_backend(self):
         self.set_backend(self.default_backend)
         return self._backend
 
     def __getattr__(self, attr):
-        backend = self._backend
-        if backend is None:
-            backend = self.get_backend()
+        backend = (self._backend or self.get_backend())
         try:
             value = getattr(backend, attr)
         except AttributeError:
@@ -81,3 +78,7 @@ class SwappableCache(object):
         self._backend_attrs.append(attr)
         setattr(self, attr, value)
         return value
+
+    def __contains__(self, key):
+        backend = (self._backend or self.get_backend())
+        return key in backend
