@@ -26,6 +26,7 @@ def to_int(s, default=0):
     except (TypeError, ValueError):
         return default
 
+@register.simple_tag
 def plural(n_str, singular, plural=None):
     """ A better pluralization template tag.
 
