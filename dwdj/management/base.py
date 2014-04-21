@@ -6,6 +6,9 @@ from optparse import make_option, OptionParser
 from dwdj.strutil import dedent
 
 from django.core.management.base import BaseCommand as DjBaseCommand
+from django.core.management.base import CommandError
+
+CommandError
 
 class BaseCommand(DjBaseCommand):
     """ A less terrible base class for Djagno management commands.
