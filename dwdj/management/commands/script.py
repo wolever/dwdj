@@ -8,7 +8,7 @@ log = logging.getLogger("script")
 HELP = """\
 Sets up the Django environment then runs a script as if it were invoked
 directly. Useful for situations where a script needs access to models,
-settings, etc, but creating a management command is undesierable.
+settings, etc, but creating a management command is undesirable.
 
 For example::
 
