@@ -40,6 +40,6 @@ class Command(BaseCommand):
                 "__builtins__": globals()["__builtins__"],
                 "__file__": script,
             }
-            execfile(script, script_globals, {})
+            execfile(script, script_globals, script_globals)
         finally:
             sys.argv[:] = old_argv
