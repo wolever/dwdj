@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
 
-from django.http import Http404
+from django.core import urlresolvers
+from django.conf import settings as s
+from django.http import Http404, HttpResponsePermanentRedirect
 
-from ensi_common.dt import utcnow
 
 class ActualHTTPMethodMiddleware(object):
     """ Allow an 'actual_method' GET paramter to modify the HTTP request
@@ -59,7 +61,7 @@ class AccessLogMiddleware(object):
             env.get("REMOTE_ADDR"),
             hex(id(request))[-6:],
             username,
-            utcnow().strftime("%d/%b/%Y:%H:%M:%S -0000"),
+            datetime.utcnow().strftime("%d/%b/%Y:%H:%M:%S -0000"),
             env.get("REQUEST_METHOD"),
             env.get("PATH_INFO"),
             env.get("SERVER_PROTOCOL"),
@@ -87,3 +89,33 @@ class AccessLogMiddleware(object):
             # process_response.
             return
         self.error_log.exception(self.format_log(request, 500, 0))
+
+
+class RemoveTrailingSlashMiddleware(object):
+    """ The opposite of Django's ``APPEND_SLASH``, removes a trailing slash
+        from URLs when appropriate. """
+
+    def process_request(self, request):
+        old_path = request.path
+        if not old_path.endswith('/'):
+            return
+
+        urlconf = getattr(request, "urlconf", None)
+
+        if urlresolvers.is_valid_path(request.path_info, urlconf):
+            return
+
+        if not urlresolvers.is_valid_path(request.path_info.rstrip("/"), urlconf):
+            return
+
+        new_path = request.path.rstrip("/")
+
+        if s.DEBUG and request.method == 'POST':
+            raise RuntimeError((
+                "You called this URL via POST, but the URL should not end "
+                "in a slash and RemoveTrailingSlashMiddleware is active. "
+                "I can't redirect to the slash URL while maintaining POST data. "
+                "Change your form to point to %s (no trailing slash)."
+            ) %(new_path, ))
+
+        return HttpResponsePermanentRedirect(new_path)
