@@ -97,7 +97,7 @@ class RemoveTrailingSlashMiddleware(object):
 
     def process_request(self, request):
         old_path = request.path
-        if not old_path.endswith('/'):
+        if not old_path.endswith("/") or old_path == "/":
             return
 
         urlconf = getattr(request, "urlconf", None)

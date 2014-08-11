@@ -5,8 +5,11 @@ from optparse import make_option, OptionParser
 
 from dwdj.strutil import dedent
 
+from django.utils.functional import cached_property
 from django.core.management.base import BaseCommand as DjBaseCommand
-from django.core.management.base import CommandError
+from django.core.management.base import (
+    CommandError, OutputWrapper, handle_default_options,
+)
 
 CommandError
 
@@ -24,6 +27,15 @@ class BaseCommand(DjBaseCommand):
           stderr logger if no matching logger is found).
         * Subclassess can set ``option_list`` directly - the base options are
           stored in ``base_option_list`` and merged with ``get_option_list``.
+        * The ``self.log`` attribute will be set to a logger configured to use
+          the name from ``self.get_log_name()`` (which defaults to the fully
+          qualified name of the module containing the command).
+        * If ``handle`` returns an integer it will be treated as a numeric exit
+          status. If a ``str`` or ``unicode`` is returned it will be treated
+          "normally" and 0 will be returned.
+        * If ``handle`` raises an exception that exception will be logged
+          (unless ``self.log_exc`` is ``False``) and the command will exit
+          with a status of 1.
 
         Example::
 
@@ -31,11 +43,13 @@ class BaseCommand(DjBaseCommand):
 
             class MyCommand(BaseCommand):
                 option_list = [
-                    make_option("-f", "--foo"),
+                    make_option("-f", "--foo", action="store_true"),
                 ]
 
                 def handle(self, *args, **options):
-                    pass
+                    if options.get("foo"):
+                        return 1
+                    return 0
     """
 
     base_option_list = [
@@ -54,11 +68,10 @@ class BaseCommand(DjBaseCommand):
             "/home/djangoprojects/myproject".
         """)),
         make_option('--traceback', action='store_true', default=True, help=dedent("""
-            Show full exception traceback
+            Log complete exception traceback, not just exception and message.
         """)),
-        make_option('--no-traceback', action='store_false', dest="traceback",
-                    help=dedent("""
-            Hide exception traceback (implied by --quiet)
+        make_option('--no-traceback', action='store_false', dest="traceback", help=dedent("""
+            Log only exception messages, not complete tracebacks.
         """))
     ]
 
@@ -68,6 +81,7 @@ class BaseCommand(DjBaseCommand):
     logging_handler_name = "stderr"
     logging_format = '%(levelname)s [%(name)s]: %(message)s'
     logging_format_verbose =  '%(asctime)s %(levelname)s [%(processName)s:%(threadName)s:%(name)s]: %(message)s'
+    log_exc = True
 
     def get_option_list(self):
         return self.base_option_list + self.option_list
@@ -113,6 +127,13 @@ class BaseCommand(DjBaseCommand):
         logger.setLevel(level)
         handler.setLevel(level)
 
+    def get_log_name(self):
+        return type(self).__module__
+
+    @cached_property
+    def log(self):
+        return logging.getLogger(self.get_log_name())
+
     def logging_get_handler(self):
         logger = logging.getLogger("")
         for handler in logger.handlers:
@@ -122,3 +143,74 @@ class BaseCommand(DjBaseCommand):
         handler.name = self.logging_handler_name
         logger.addHandler(handler)
         return logger, handler
+
+    def run_from_argv(self, argv):
+        """
+        Set up any environment changes requested (e.g., Python path
+        and Django settings), then run this command. If the
+        command raises a ``CommandError``, intercept it and print it sensibly
+        to stderr.
+        """
+        parser = self.create_parser(argv[0], argv[1])
+        options, args = parser.parse_args(argv[2:])
+        handle_default_options(options)
+        try:
+            result = self.execute(*args, **options.__dict__)
+        except SystemExit:
+            raise
+        except BaseException:
+            result = self.handle_execute_exc(options)
+            if result is None:
+                result = 1
+        sys.exit(result or 0)
+
+    def handle_execute_exc(self, options):
+        if not self.log_exc:
+            return 1
+        if options.traceback:
+            self.log.exception("Exception running command:")
+        else:
+            exc_info = sys.exc_info()
+            self.log.error("%s: %s", exc_info[0].__name__, exc_info[1])
+        return 1
+
+    def execute(self, *args, **options):
+        """
+        Try to execute this command, performing model validation if
+        needed (as controlled by the attribute
+        ``self.requires_model_validation``, except if force-skipped).
+        """
+
+        # Switch to English, because django-admin.py creates database content
+        # like permissions, and those shouldn't contain any translations.
+        # But only do this if we can assume we have a working settings file,
+        # because django.utils.translation requires settings.
+        saved_lang = None
+        self.stdout = OutputWrapper(options.get('stdout', sys.stdout))
+        self.stderr = OutputWrapper(options.get('stderr', sys.stderr), self.style.ERROR)
+
+        if self.can_import_settings:
+            from django.utils import translation
+            saved_lang = translation.get_language()
+            translation.activate('en-us')
+
+        try:
+            if self.requires_model_validation and not options.get('skip_validation'):
+                self.validate()
+            result = self.handle(*args, **options)
+            if isinstance(result, basestring):
+                if self.output_transaction:
+                    # This needs to be imported here, because it relies on
+                    # settings.
+                    from django.db import connections, DEFAULT_DB_ALIAS
+                    connection = connections[options.get('database', DEFAULT_DB_ALIAS)]
+                    if connection.ops.start_transaction_sql():
+                        self.stdout.write(self.style.SQL_KEYWORD(connection.ops.start_transaction_sql()))
+                self.stdout.write(result)
+                if self.output_transaction:
+                    self.stdout.write('\n' + self.style.SQL_KEYWORD("COMMIT;"))
+                result = 0
+            return result
+        finally:
+            if saved_lang is not None:
+                translation.activate(saved_lang)
