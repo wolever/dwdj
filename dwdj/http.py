@@ -50,7 +50,5 @@ def file_response(request, filepath,
         open(filepath, 'rb'), size=statobj.st_size,
         mimetype=mimetype, encoding=encoding,
     )
-    response = CompatibleStreamingHttpResponse(open(filepath, 'rb'),
-                                               content_type=mimetype)
     response["Last-Modified"] = http_date(statobj.st_mtime)
     return response
