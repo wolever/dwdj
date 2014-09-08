@@ -124,7 +124,6 @@ class BaseCommand(DjBaseCommand):
         logger, handler = self.logging_get_handler()
         formatter = logging.Formatter(format)
         handler.setFormatter(formatter)
-        logger.setLevel(level)
         handler.setLevel(level)
 
     def get_log_name(self):
