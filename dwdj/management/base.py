@@ -3,15 +3,19 @@ import logging
 from functools import partial
 from optparse import make_option, OptionParser
 
-from dwdj.strutil import dedent
-
+from django.dispatch import Signal
 from django.utils.functional import cached_property
 from django.core.management.base import BaseCommand as DjBaseCommand
 from django.core.management.base import (
     CommandError, OutputWrapper, handle_default_options,
 )
 
+from dwdj.strutil import dedent
+
 CommandError
+
+signal_pre_run = Signal(providing_args=["argv"])
+signal_post_run = Signal(providing_args=["status"])
 
 class BaseCommand(DjBaseCommand):
     """ A less terrible base class for Djagno management commands.
@@ -124,6 +128,8 @@ class BaseCommand(DjBaseCommand):
         logger, handler = self.logging_get_handler()
         formatter = logging.Formatter(format)
         handler.setFormatter(formatter)
+        if logger.level > level:
+            logger.setLevel(level)
         handler.setLevel(level)
 
     def get_log_name(self):
@@ -150,18 +156,22 @@ class BaseCommand(DjBaseCommand):
         command raises a ``CommandError``, intercept it and print it sensibly
         to stderr.
         """
+        signal_pre_run.send(self, argv=argv)
         parser = self.create_parser(argv[0], argv[1])
         options, args = parser.parse_args(argv[2:])
         handle_default_options(options)
         try:
             result = self.execute(*args, **options.__dict__)
-        except SystemExit:
+        except SystemExit as e:
+            signal_post_run.send(self, status=e.code)
             raise
         except BaseException:
             result = self.handle_execute_exc(options)
             if result is None:
                 result = 1
-        sys.exit(result or 0)
+        status = result or 0
+        signal_post_run.send(self, status=status)
+        sys.exit(status)
 
     def handle_execute_exc(self, options):
         if not self.log_exc:

@@ -118,4 +118,7 @@ class RemoveTrailingSlashMiddleware(object):
                 "Change your form to point to %s (no trailing slash)."
             ) %(new_path, ))
 
+        query = request.environ.get("QUERY_STRING")
+        if query:
+            new_path += "?" + query
         return HttpResponsePermanentRedirect(new_path)
