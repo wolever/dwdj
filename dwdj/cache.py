@@ -55,9 +55,9 @@ class SwappableCache(object):
         self.default_backend = host
 
     def set_backend(self, new_backend):
-        from django.core import cache as django_cache
+        from django.core.cache import get_cache as django_get_cache
         if isinstance(new_backend, basestring):
-            new_backend = django_cache.get_cache(new_backend)
+            new_backend = django_get_cache(new_backend)
         self._backend = new_backend
         for attr in self._backend_attrs:
             try:

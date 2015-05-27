@@ -16,3 +16,4 @@ env/
 *egg-info*
 misc/
 dist/
+build/

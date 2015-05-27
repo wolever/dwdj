@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import include
+from django.conf.urls import include
 
 def include_factory(package, includefunc=include):
     """ Returns a Django-urls-``include`` function which will resolve names relative

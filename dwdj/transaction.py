@@ -34,9 +34,9 @@ class table_lock(object):
 
     def __enter__(self):
         assert self.cxn is None, "lock already acquired"
-        self.cxn = connections[self.using or DEFAULT_DB_ALIAS]
-        if not self.cxn.is_managed():
-            self.txn = transaction.commit_on_success(using=self.using)
+        self.cxn = transaction.get_connection(self.using)
+        if not self.cxn.in_atomic_block:
+            self.txn = transaction.atomic(using=self.using)
             self.txn.__enter__()
         self.cur = self.cxn.cursor()
         self.cur.execute("LOCK TABLE %s IN %s MODE" %(
