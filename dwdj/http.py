@@ -16,6 +16,8 @@ def escape_header(header_value):
 def data_response(data, size=None,
                   attachment=False, attachment_name=None,
                   mimetype=None, encoding=None):
+    if hasattr(data, "getvalue"):
+        data = data.getvalue()
     if isinstance(data, unicode):
         data = data.encode("utf-8")
         encoding = "utf-8"
