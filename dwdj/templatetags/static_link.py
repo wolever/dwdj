@@ -37,9 +37,12 @@ def _mtime_suffix(file):
                         %(file, staticfiles))
     return _stat(staticfiles[0])
 
-@register.simple_tag
-def static_url(file):
-    return "%s%s?%s" %(s.STATIC_URL, file, _mtime_suffix(file))
+@register.simple_tag(takes_context=True)
+def static_url(context, file, absolute=False):
+    url = "%s%s?%s" %(s.STATIC_URL, file, _mtime_suffix(file))
+    if absolute:
+        url = context["request"].build_absolute_uri(url)
+    return url
 
 @register.simple_tag
 def stylesheet_link(stylesheet, media="all", rel="stylesheet", type="text/css",
@@ -56,7 +59,6 @@ def stylesheet_link(stylesheet, media="all", rel="stylesheet", type="text/css",
 
 @register.simple_tag
 def script_link(script, type="text/javascript", **attrs):
-
     return mark_safe('<script type="%s" src="%s%s?%d"%s></script>' %(
         type,
         s.STATIC_URL,
