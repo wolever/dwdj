@@ -64,8 +64,8 @@ class Command(BaseCommand):
         if not quiet:
             print "FOUND UNAPPLIED MIGRATIONS"
             print "=========================="
-            for migration in sorted(unapplied, key=lambda x: (x.app_name, x.name)):
-                print "%s: %s" %(migration.app_name, migration.name)
+            for migration in sorted(unapplied, key=lambda x: (x.app_label, x.name)):
+                print "%s: %s" %(migration.app_label, migration.name)
 
         if options.get("interactive"):
             print
