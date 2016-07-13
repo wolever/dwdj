@@ -204,7 +204,7 @@ class BaseCommand(DjBaseCommand):
             translation.activate('en-us')
 
         try:
-            if self.requires_model_validation and not options.get('skip_validation'):
+            if getattr(self, "requires_model_validation", False) and not options.get('skip_validation'):
                 self.validate()
             result = self.handle(*args, **options)
             if isinstance(result, basestring):
