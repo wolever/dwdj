@@ -5,7 +5,11 @@ from cStringIO import StringIO
 
 from django.utils.http import http_date
 from django.views.static import was_modified_since
-from django.http import CompatibleStreamingHttpResponse, HttpResponseNotModified
+from django.http import HttpResponseNotModified
+try:
+    from django.http import CompatibleStreamingHttpResponse as StreamingHttpResponse
+except ImportError:
+    from django.http import StreamingHttpResponse
 
 def escape_header(header_value):
     """ Escapes an HTTP header (ex, a ``Content-Disposition``).
@@ -25,7 +29,7 @@ def data_response(data, size=None,
         size = len(data)
         data = StringIO(data)
     mimetype = mimetype or 'application/octet-stream'
-    response = CompatibleStreamingHttpResponse(data, content_type=mimetype)
+    response = StreamingHttpResponse(data, content_type=mimetype)
     if size is not None:
         response["Content-Length"] = size
     if encoding:
