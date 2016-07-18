@@ -56,6 +56,11 @@ class BaseCommand(DjBaseCommand):
                     return 0
     """
 
+    # For now, tell Django to use the legacy optparse option parsing. At some
+    # point we'll need to update all the option parsing so it's done the fancy
+    # new way with argparse, but that day is not today.
+    use_argparse = False
+
     base_option_list = [
         make_option('-q', '--quiet', action="store_const", const=-1, dest="verbosity"),
         make_option('-v', '--verbose', action="count", default=0, dest="verbosity"),
