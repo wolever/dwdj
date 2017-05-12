@@ -39,7 +39,7 @@ def plural(n_str, singular, plural=None):
 
         If the ``singular`` and ``plural`` strings can contain a ``{``, they
         will be treated as ``str.format`` templates::
-        
+
             > There {% plural cats|length "is {} cat" "are {} cats" %}.
             There is 1 cat.
             > There {% plural dogs|length "is {} dog" "are {} dogs" %}.

@@ -75,6 +75,8 @@ class Command(BaseCommand):
                 return 0
             print "NOT applying migrations."
 
+        return 1
+
     def run_south(self, args, options):
         applied_dict = dict(self.get_applied_migrations())
         available = self.get_available_migrations()
